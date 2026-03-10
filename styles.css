@@ -1,0 +1,244 @@
+:root {
+    --bg-color: #f3f4f6;
+    --card-bg: #ffffff;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --input-bg: #ffffff;
+    --input-border: #e5e7eb;
+    --input-focus: #3b82f6;
+    --rank-s: #fbbf24;
+    --rank-s-bg: #fffbeb;
+    --rank-s-text: #b45309;
+    --rank-a: #9ca3af;
+    --rank-a-bg: #f3f4f6;
+    --rank-a-text: #374151;
+    --rank-b: #d97706;
+    --rank-b-bg: #fef3c7;
+    --rank-b-text: #92400e;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-full: 9999px;
+    --transition: all 0.3s ease;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: white;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+}
+
+.header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.025em;
+}
+
+.header p {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    width: 100%;
+}
+
+.search-container {
+    position: relative;
+    margin-bottom: 2rem;
+    transform: translateY(-4rem);
+}
+
+.search-icon {
+    position: absolute;
+    left: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 1.25rem;
+}
+
+#searchInput {
+    width: 100%;
+    padding: 1.25rem 1.25rem 1.25rem 3.5rem;
+    font-size: 1.125rem;
+    border: none;
+    border-radius: var(--radius-xl);
+    background-color: var(--input-bg);
+    box-shadow: var(--shadow-lg);
+    transition: var(--transition);
+    outline: none;
+    color: var(--text-primary);
+}
+
+#searchInput::placeholder {
+    color: #9ca3af;
+}
+
+#searchInput:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), var(--shadow-lg);
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: -2rem; /* adjust for search bar */
+}
+
+/* Glassmorphism Card Style */
+.card {
+    background-color: var(--card-bg);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: fadeIn 0.4s ease-out forwards;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--input-border);
+    padding-bottom: 1rem;
+}
+
+.brand-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.brand-furigana {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    display: block;
+    margin-top: 0.25rem;
+}
+
+.rank-badge {
+    padding: 0.35rem 1rem;
+    border-radius: var(--radius-full);
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: 0.05em;
+}
+
+.rank-s {
+    background-color: var(--rank-s-bg);
+    color: var(--rank-s-text);
+    border: 1px solid var(--rank-s);
+}
+
+.rank-a {
+    background-color: var(--rank-a-bg);
+    color: var(--rank-a-text);
+    border: 1px solid var(--rank-a);
+}
+
+.rank-b {
+    background-color: var(--rank-b-bg);
+    color: var(--rank-b-text);
+    border: 1px solid var(--rank-b);
+}
+
+.card-body {
+    flex-grow: 1;
+}
+
+.notes-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.notes-text {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.no-results {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    background-color: var(--card-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    margin-top: -2rem;
+}
+
+.no-results i {
+    font-size: 3rem;
+    color: #cbd5e1;
+    margin-bottom: 1rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 640px) {
+    .header {
+        padding: 2rem 1rem;
+    }
+    
+    .search-container {
+        transform: translateY(-3rem);
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
