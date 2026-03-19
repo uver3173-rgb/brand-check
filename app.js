@@ -1,5 +1,5 @@
 // Mock Data
-const brands = [
+let brands = [
     {
         id: 1,
         name: "エルメス",
@@ -44,6 +44,7 @@ const brands = [
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
+const csvFileInput = document.getElementById('csvFileInput');
 const resultsContainer = document.getElementById('resultsContainer');
 const noResults = document.getElementById('noResults');
 
@@ -71,7 +72,9 @@ const renderCards = (data) => {
         const card = document.createElement('div');
         card.className = 'card';
         
-        const rankClass = `rank-${brand.rank.toLowerCase()}`;
+        const rawRankClass = `rank-${brand.rank.toLowerCase()}`;
+        // Fallback to default if CSS class does not exist for the specific rank
+        const rankClass = ['rank-s', 'rank-a', 'rank-b'].includes(rawRankClass) ? rawRankClass : 'rank-default';
         
         card.innerHTML = `
             <div class="card-header">
@@ -114,6 +117,44 @@ const handleSearch = (e) => {
 
 // Event Listeners
 searchInput.addEventListener('input', handleSearch);
+
+csvFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            const data = results.data;
+            const newBrands = data.map((row, index) => {
+                return {
+                    id: index + 1,
+                    name: row['ブランド名'] || row['Brand'] || row['brand'] || '',
+                    furigana: row['フリガナ'] || row['ふりがな'] || '',
+                    en: row['英語'] || row['英語名'] || '',
+                    rank: row['区分'] || row['Rank'] || row['rank'] || '不明',
+                    notes: row['備考'] || row['Notes'] || row['notes'] || ''
+                };
+            }).filter(b => b.name); // ブランド名がない行は除外
+
+            if (newBrands.length > 0) {
+                brands = newBrands;
+                handleSearch({ target: { value: searchInput.value } });
+            } else {
+                alert('有効なデータが見つかりませんでした。「ブランド名」列が存在するか確認してください。');
+            }
+            
+            // Reset input so the same file can be selected again
+            e.target.value = '';
+        },
+        error: function(err) {
+            alert('CSVの読み込みに失敗しました。');
+            console.error(err);
+            e.target.value = '';
+        }
+    });
+});
 
 // Initial Render
 renderCards(brands);
