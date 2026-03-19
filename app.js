@@ -102,16 +102,18 @@ const loadExternalMasterData = () => {
                 return parsedBrands;
             };
 
-            // まずUTF-8としてデコード
-            let text = new TextDecoder('utf-8').decode(buffer);
-            let extracted = tryParse(text);
-
-            // UTF-8で読み込めなかった（文字化けでキーが見つからない）場合は Shift-JIS を試す
-            if (extracted.length === 0) {
-                console.warn("UTF-8 decoding resulted in 0 brands. Retrying with Shift-JIS...");
+            // まずUTF-8 (fatal: true) としてデコードを試みる
+            let text = '';
+            try {
+                // fatal: true にすることで、Shift-JISなどの非UTF-8文字列が混ざっていると例外が発生する
+                text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+            } catch (e) {
+                // UTF-8で読み込めなかった（デコード失敗）場合は Shift-JIS としてデコード
+                console.warn("UTF-8 decoding failed. Retrying with Shift-JIS...");
                 text = new TextDecoder('shift_jis').decode(buffer);
-                extracted = tryParse(text);
             }
+
+            let extracted = tryParse(text);
 
             if (extracted.length > 0) {
                 extracted.forEach((b, i) => b.id = i + 1);
