@@ -1,5 +1,5 @@
-// Mock Data
-let brands = [
+// Default Mock Data
+const defaultBrands = [
     {
         id: 1,
         name: "エルメス",
@@ -42,9 +42,26 @@ let brands = [
     }
 ];
 
+// Load from LocalStorage or use default
+let brands = [...defaultBrands];
+try {
+    const saved = localStorage.getItem('brandMasterData');
+    if (saved) {
+        brands = JSON.parse(saved);
+    }
+} catch (e) {
+    console.error('Failed to parse localStorage data', e);
+}
+
+// Save function
+const saveBrands = () => {
+    localStorage.setItem('brandMasterData', JSON.stringify(brands));
+};
+
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
 const csvFileInput = document.getElementById('csvFileInput');
+const csvEncoding = document.getElementById('csvEncoding');
 const resultsContainer = document.getElementById('resultsContainer');
 const noResults = document.getElementById('noResults');
 
@@ -122,35 +139,67 @@ csvFileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const encoding = csvEncoding.value;
+
     Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
+        encoding: encoding,
         complete: function(results) {
             const data = results.data;
-            const newBrands = data.map((row, index) => {
-                return {
-                    id: index + 1,
-                    name: row['ブランド名'] || row['Brand'] || row['brand'] || '',
-                    furigana: row['フリガナ'] || row['ふりがな'] || '',
-                    en: row['英語'] || row['英語名'] || '',
-                    rank: row['区分'] || row['Rank'] || row['rank'] || '不明',
-                    notes: row['備考'] || row['Notes'] || row['notes'] || ''
-                };
+            if (data.length > 0) {
+                console.log(`CSV 読み込み結果 (エンコード: ${encoding}):`, Object.keys(data[0]));
+            }
+
+            const cleanKey = (k) => k.replace(/^[\uFEFF\u200B\xA0\s]+|[\uFEFF\u200B\xA0\s]+$/g, '').toLowerCase();
+
+            const newBrands = data.map((row) => {
+                let name = '', furigana = '', en = '', rank = '不明', notes = '';
+                
+                for (const k in row) {
+                    const ck = cleanKey(k);
+                    const val = row[k] ? String(row[k]).trim() : '';
+                    if (!val) continue;
+
+                    if (ck.includes('ブランド') || ck.includes('brand') || ck.includes('名前') || ck.includes('name')) {
+                        name = name || val;
+                    } else if (ck.includes('フリガナ') || ck.includes('ふりがな') || ck.includes('kana')) {
+                        furigana = furigana || val;
+                    } else if (ck.includes('英語') || ck.includes('en')) {
+                        en = en || val;
+                    } else if (ck.includes('区分') || ck.includes('ランク') || ck.includes('rank') || ck.includes('class')) {
+                        rank = rank === '不明' ? val : rank;
+                    } else if (ck.includes('備考') || ck.includes('note')) {
+                        notes = notes || val;
+                    }
+                }
+                
+                return { name, furigana, en, rank, notes };
             }).filter(b => b.name); // ブランド名がない行は除外
 
             if (newBrands.length > 0) {
-                brands = newBrands;
+                newBrands.forEach(newBrand => {
+                    const existingIndex = brands.findIndex(b => b.name === newBrand.name);
+                    if (existingIndex >= 0) {
+                        // Update existing
+                        brands[existingIndex] = { ...brands[existingIndex], ...newBrand };
+                    } else {
+                        // Insert new
+                        newBrand.id = brands.length > 0 ? Math.max(...brands.map(b => b.id || 0)) + 1 : 1;
+                        brands.push(newBrand);
+                    }
+                });
+                saveBrands();
                 handleSearch({ target: { value: searchInput.value } });
+                e.target.value = ''; // Reset input
             } else {
-                alert('有効なデータが見つかりませんでした。「ブランド名」列が存在するか確認してください。');
+                alert(`有効なデータが見つかりませんでした。「ブランド名」（または「Brand」など）を含む列があるか確認してください。\n文字化けしている可能性があるため、文字コード設定（現在: ${encoding}）を見直してお試しください。`);
+                e.target.value = '';
             }
-            
-            // Reset input so the same file can be selected again
-            e.target.value = '';
         },
         error: function(err) {
-            alert('CSVの読み込みに失敗しました。');
             console.error(err);
+            alert('CSVの読み込みに失敗しました。');
             e.target.value = '';
         }
     });

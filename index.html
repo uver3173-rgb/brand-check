@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ブランドランク検索アプリ</title>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,8 +17,20 @@
 
         <main class="container">
             <div class="search-container">
-                <i class="ph ph-magnifying-glass search-icon"></i>
-                <input type="text" id="searchInput" placeholder="ブランド名を入力... (例: エルメス, えるめす)" autocomplete="off">
+                <div class="search-input-wrapper">
+                    <i class="ph ph-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="ブランド名を入力... (例: エルメス, えるめす)" autocomplete="off">
+                </div>
+                <div class="actions-wrapper">
+                    <select id="csvEncoding" class="encoding-select">
+                        <option value="UTF-8">UTF-8</option>
+                        <option value="Shift-JIS" selected>Shift-JIS (Excel)</option>
+                    </select>
+                    <label for="csvFileInput" class="btn-import">
+                        <i class="ph ph-upload-simple"></i> マスタ取込
+                    </label>
+                    <input type="file" id="csvFileInput" accept=".csv" class="hidden-input">
+                </div>
             </div>
 
             <div id="resultsContainer" class="results-grid">

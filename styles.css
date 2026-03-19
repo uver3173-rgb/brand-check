@@ -88,6 +88,27 @@ body {
 .actions-wrapper {
     flex-shrink: 0;
     height: 3.5rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.encoding-select {
+    height: 100%;
+    padding: 0 1rem;
+    background-color: var(--card-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-xl);
+    font-size: 0.875rem;
+    outline: none;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.encoding-select:focus {
+    border-color: var(--input-focus);
 }
 
 .btn-import {
@@ -114,7 +135,12 @@ body {
 }
 
 .hidden-input {
-    display: none;
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
 }
 
 .search-icon {
@@ -289,10 +315,18 @@ body {
     
     .actions-wrapper {
         width: 100%;
+        flex-direction: column;
+        height: auto;
+    }
+
+    .encoding-select {
+        width: 100%;
+        min-height: 3.5rem;
     }
     
     .btn-import {
         width: 100%;
+        min-height: 3.5rem;
     }
     
     .results-grid {
