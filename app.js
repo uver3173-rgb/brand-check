@@ -63,59 +63,70 @@ const loadExternalMasterData = () => {
     fetch('master.csv')
         .then(response => {
             if (!response.ok) throw new Error('master.csv not found on server');
-            return response.text();
+            return response.arrayBuffer(); // バイナリとして取得
         })
-        .then(csvText => {
-            // パースは常にUTF-8を想定（GitHubアップロード時はUTF-8推奨）
-            Papa.parse(csvText, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    const data = results.data;
-                    const cleanKey = (k) => k.replace(/^[\uFEFF\u200B\xA0\s]+|[\uFEFF\u200B\xA0\s]+$/g, '').toLowerCase();
+        .then(buffer => {
+            // パース処理を共通化
+            const tryParse = (decodedText) => {
+                let parsedBrands = [];
+                Papa.parse(decodedText, {
+                    header: true,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        const data = results.data;
+                        const cleanKey = (k) => k.replace(/^[\uFEFF\u200B\xA0\s]+|[\uFEFF\u200B\xA0\s]+$/g, '').toLowerCase();
 
-                    const newBrands = data.map((row) => {
-                        let name = '', furigana = '', en = '', rank = '不明', notes = '';
-                        for (const k in row) {
-                            const ck = cleanKey(k);
-                            const val = row[k] ? String(row[k]).trim() : '';
-                            if (!val) continue;
+                        parsedBrands = data.map((row) => {
+                            let name = '', furigana = '', en = '', rank = '不明', notes = '';
+                            for (const k in row) {
+                                const ck = cleanKey(k);
+                                const val = row[k] ? String(row[k]).trim() : '';
+                                if (!val) continue;
 
-                            if (ck.includes('ブランド') || ck.includes('brand') || ck.includes('名前') || ck.includes('name')) {
-                                name = name || val;
-                            } else if (ck.includes('フリガナ') || ck.includes('ふりがな') || ck.includes('kana')) {
-                                furigana = furigana || val;
-                            } else if (ck.includes('英語') || ck.includes('en')) {
-                                en = en || val;
-                            } else if (ck.includes('区分') || ck.includes('ランク') || ck.includes('rank') || ck.includes('class')) {
-                                rank = rank === '不明' ? val : rank;
-                            } else if (ck.includes('備考') || ck.includes('note')) {
-                                notes = notes || val;
+                                if (ck.includes('ブランド') || ck.includes('brand') || ck.includes('名前') || ck.includes('name')) {
+                                    name = name || val;
+                                } else if (ck.includes('フリガナ') || ck.includes('ふりがな') || ck.includes('kana')) {
+                                    furigana = furigana || val;
+                                } else if (ck.includes('英語') || ck.includes('en')) {
+                                    en = en || val;
+                                } else if (ck.includes('区分') || ck.includes('ランク') || ck.includes('rank') || ck.includes('class')) {
+                                    rank = rank === '不明' ? val : rank;
+                                } else if (ck.includes('備考') || ck.includes('note')) {
+                                    notes = notes || val;
+                                }
                             }
-                        }
-                        return { name, furigana, en, rank, notes };
-                    }).filter(b => b.name);
-
-                    if (newBrands.length > 0) {
-                        // 外部マスタをベースにし、そこに既存（手動追加）分をマージする等の戦略も取れるが、
-                        // ここではサーバ上の master.csv を正と見なし、完全な初期データとして上書きする。
-                        // (IDを振り直す)
-                        newBrands.forEach((b, i) => b.id = i + 1);
-                        brands = newBrands;
-                        
-                        // LocalStorageが古ければ上書き、またはマスターを優先する
-                        saveBrands();
-                        
-                        // 画面更新
-                        if (typeof handleSearch === 'function' && searchInput) {
-                            handleSearch({ target: { value: searchInput.value } });
-                        } else {
-                            renderCards(brands);
-                        }
-                        console.log("External master.csv loaded successfully.");
+                            return { name, furigana, en, rank, notes };
+                        }).filter(b => b.name);
                     }
+                });
+                return parsedBrands;
+            };
+
+            // まずUTF-8としてデコード
+            let text = new TextDecoder('utf-8').decode(buffer);
+            let extracted = tryParse(text);
+
+            // UTF-8で読み込めなかった（文字化けでキーが見つからない）場合は Shift-JIS を試す
+            if (extracted.length === 0) {
+                console.warn("UTF-8 decoding resulted in 0 brands. Retrying with Shift-JIS...");
+                text = new TextDecoder('shift_jis').decode(buffer);
+                extracted = tryParse(text);
+            }
+
+            if (extracted.length > 0) {
+                extracted.forEach((b, i) => b.id = i + 1);
+                brands = extracted;
+                saveBrands();
+                
+                if (typeof handleSearch === 'function' && searchInput) {
+                    handleSearch({ target: { value: searchInput.value } });
+                } else {
+                    renderCards(brands);
                 }
-            });
+                console.log("External master.csv loaded and applied successfully.");
+            } else {
+                console.log("Could not extract valid brands from master.csv.");
+            }
         })
         .catch(err => {
             console.log("No external master.csv loaded:", err.message);
