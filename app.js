@@ -175,7 +175,7 @@ const renderCards = (data) => {
                 <div>
                     <h2 class="brand-name">${brand.name} <span class="brand-furigana">${brand.en}</span></h2>
                 </div>
-                <div class="rank-badge ${rankClass}">Rank ${brand.rank}</div>
+                <div class="rank-badge ${rankClass}">${brand.rank}</div>
             </div>
             <div class="card-body">
                 <div class="notes-label"><i class="ph ph-info"></i> 備考</div>
