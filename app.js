@@ -58,9 +58,23 @@ const saveBrands = () => {
     localStorage.setItem('brandMasterData', JSON.stringify(brands));
 };
 
+// Utility: Fix common Shift_JIS to Unicode mapping issues (Mojibake of symbols)
+const fixMojibake = (str) => {
+    if (typeof str !== 'string') return str;
+    return str
+        .replace(/\u301C/g, '\uFF5E') // 波ダッシュ (Wave Dash) -> 全角チルダ
+        .replace(/\u2212/g, '\uFF0D') // マイナス (Minus) -> 全角マイナス
+        .replace(/\u00A2/g, '\uFFE0') // セント
+        .replace(/\u00A3/g, '\uFFE1') // ポンド
+        .replace(/\u00AC/g, '\uFFE2') // ノット
+        .replace(/\u2014/g, '\u2015') // ダッシュ
+        .replace(/\u2016/g, '\u2225'); // 双柱
+};
+
 // Fetch external master data (master.csv) deployed on server
 const loadExternalMasterData = () => {
-    fetch('master.csv')
+    // キャッシュを回避するためにタイムスタンプを付与
+    fetch(`master.csv?t=${new Date().getTime()}`)
         .then(response => {
             if (!response.ok) throw new Error('master.csv not found on server');
             return response.arrayBuffer(); // バイナリとして取得
@@ -80,7 +94,7 @@ const loadExternalMasterData = () => {
                             let name = '', furigana = '', en = '', rank = '不明', notes = '';
                             for (const k in row) {
                                 const ck = cleanKey(k);
-                                const val = row[k] ? String(row[k]).trim() : '';
+                                const val = row[k] ? fixMojibake(String(row[k]).trim()) : '';
                                 if (!val) continue;
 
                                 if (ck.includes('ブランド') || ck.includes('brand') || ck.includes('名前') || ck.includes('name')) {
@@ -103,14 +117,27 @@ const loadExternalMasterData = () => {
             };
 
             // まずUTF-8 (fatal: true) としてデコードを試みる
+            // Pre-process buffer to fix MacJapanese specific bytes (e.g., curly quotes ’ in 's choice)
+            // Mac Shift-JIS uses 0x85xx for some symbols which are unassigned in Windows-31J and become 
+            const view = new Uint8Array(buffer);
+            for (let i = 0; i < view.length - 1; i++) {
+                if (view[i] === 0x85) {
+                    if (view[i+1] === 0x48) { view[i] = 0x81; view[i+1] = 0x66; i++; } // ’ (Right Single Quote)
+                    else if (view[i+1] === 0x47) { view[i] = 0x81; view[i+1] = 0x65; i++; } // ‘ (Left Single Quote)
+                    else if (view[i+1] === 0x4A) { view[i] = 0x81; view[i+1] = 0x68; i++; } // ” (Right Double Quote)
+                    else if (view[i+1] === 0x49) { view[i] = 0x81; view[i+1] = 0x67; i++; } // “ (Left Double Quote)
+                    else if (view[i+1] === 0x44) { view[i] = 0x81; view[i+1] = 0x63; i++; } // … (Ellipsis)
+                }
+            }
+
             let text = '';
             try {
                 // fatal: true にすることで、Shift-JISなどの非UTF-8文字列が混ざっていると例外が発生する
                 text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
             } catch (e) {
-                // UTF-8で読み込めなかった（デコード失敗）場合は Shift-JIS としてデコード
-                console.warn("UTF-8 decoding failed. Retrying with Shift-JIS...");
-                text = new TextDecoder('shift_jis').decode(buffer);
+                // UTF-8で読み込めなかった（デコード失敗）場合は Windows-31J (より正確なShift-JIS) としてデコード
+                console.warn("UTF-8 decoding failed. Retrying with Windows-31J...");
+                text = new TextDecoder('Windows-31J').decode(buffer);
             }
 
             let extracted = tryParse(text);
@@ -132,7 +159,19 @@ const loadExternalMasterData = () => {
         })
         .catch(err => {
             console.log("No external master.csv loaded:", err.message);
+            // If we are opening a local file:// without a server, fetch fails. Provide a warning once.
+            if (window.location.protocol === 'file:' && !localStorage.getItem('fileProtocolWarned')) {
+                console.warn("Local file:// protocol detected. Cannot fetch master.csv automatically.");
+                localStorage.setItem('fileProtocolWarned', 'true');
+            }
         });
+};
+
+// Global function to clear corrupted cache manually
+window.clearCacheAndReload = () => {
+    localStorage.removeItem('brandMasterData');
+    alert('過去の誤ったデータを削除しました！リロードします。');
+    location.reload();
 };
 
 // DOM Elements
@@ -149,6 +188,17 @@ const normalizeString = (str) => {
               .replace(/[\u30a1-\u30f6]/g, function(match) {
                   return String.fromCharCode(match.charCodeAt(0) - 0x60);
               });
+};
+
+// Utility: Escape HTML to correctly display & and preventing XSS
+const escapeHTML = (str) => {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 };
 
 // Render Cards
@@ -173,13 +223,13 @@ const renderCards = (data) => {
         card.innerHTML = `
             <div class="card-header">
                 <div>
-                    <h2 class="brand-name">${brand.name} <span class="brand-furigana">${brand.en}</span></h2>
+                    <h2 class="brand-name">${escapeHTML(brand.name)} <span class="brand-furigana">${escapeHTML(brand.en)}</span></h2>
                 </div>
-                <div class="rank-badge ${rankClass}">${brand.rank}</div>
+                <div class="rank-badge ${rankClass}">${escapeHTML(brand.rank)}</div>
             </div>
             <div class="card-body">
                 <div class="notes-label"><i class="ph ph-info"></i> 備考</div>
-                <p class="notes-text">${brand.notes}</p>
+                <p class="notes-text">${escapeHTML(brand.notes)}</p>
             </div>
         `;
         
@@ -235,7 +285,7 @@ csvFileInput.addEventListener('change', (e) => {
                 
                 for (const k in row) {
                     const ck = cleanKey(k);
-                    const val = row[k] ? String(row[k]).trim() : '';
+                    const val = row[k] ? fixMojibake(String(row[k]).trim()) : '';
                     if (!val) continue;
 
                     if (ck.includes('ブランド') || ck.includes('brand') || ck.includes('名前') || ck.includes('name')) {

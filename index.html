@@ -22,9 +22,10 @@
                     <input type="text" id="searchInput" placeholder="ブランド名を入力... (例: エルメス, えるめす)" autocomplete="off">
                 </div>
                 <div class="actions-wrapper">
+                    <button type="button" onclick="clearCacheAndReload()" style="background:none;border:none;color:var(--text-secondary);text-decoration:underline;cursor:pointer;font-size:0.8rem;margin-right:0.5rem;">データ初期化</button>
                     <select id="csvEncoding" class="encoding-select">
-                        <option value="UTF-8">UTF-8</option>
-                        <option value="Shift-JIS" selected>Shift-JIS (Excel)</option>
+                        <option value="UTF-8" selected>UTF-8 (推奨)</option>
+                        <option value="Shift-JIS">Shift-JIS (旧Excel)</option>
                     </select>
                     <label for="csvFileInput" class="btn-import">
                         <i class="ph ph-upload-simple"></i> マスタ取込
